@@ -215,7 +215,7 @@ def find_problematic_ways(osm_file, epsilon_dist=1e-5):
         way_id = way.get("id")
         coords = [nodes[nd.get("ref")] for nd in way.findall("nd") if nd.get("ref") in nodes]
         if has_repeat_non_adjacent_points(coords):
-            print(f"Way {way_id} has repeat non-adjacent points.")
+            # print(f"Way {way_id} has repeat non-adjacent points.")
             problematic_ways.append(way_id)
         
         # Check for degenerate lines (length < epsilon_dist)
@@ -223,7 +223,7 @@ def find_problematic_ways(osm_file, epsilon_dist=1e-5):
             pt1, pt2 = coords[i], coords[i + 1]
             dist = math.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2)
             if dist < epsilon_dist:
-                print(f"Problematic way {way_id}: Degenerate segment from {pt1} to {pt2}")
+                # print(f"Problematic way {way_id}: Degenerate segment from {pt1} to {pt2}")
                 problematic_ways.append(way_id)
                 break
 
@@ -291,13 +291,13 @@ def fix_or_remove_invalid_ways(osm_file, output_file):
 
         if has_problem:
             if len(fixed_coords) >= 2:  # Retain only if valid polyline remains
-                print(f"Fixing way {way_id} by removing problematic points.")
+                # print(f"Fixing way {way_id} by removing problematic points.")
                 # Update the way with fixed coordinates
                 for nd, coord in zip(way.findall("nd"), fixed_coords):
                     node_id = [key for key, value in nodes.items() if value == coord][0]
                     nd.set("ref", node_id)
             else:
-                print(f"Removing way {way_id} due to invalid geometry.")
+                # print(f"Removing way {way_id} due to invalid geometry.")
                 root.remove(way)
                 removed_ways.append(way_id)
 
@@ -428,21 +428,30 @@ def process_tiles(tile_dir, input_options, output_dir, output_options=None):
     for tile_file in os.listdir(tile_dir):
         if tile_file.endswith(".osm"):
             tile_path = os.path.join(tile_dir, tile_file)
+            fixed_tile_path = tile_path.replace(".osm", "_fixed.osm")
+
+            # Skip already-processed `_fixed` files
+            if os.path.basename(tile_file).endswith("_fixed.osm"):
+                print(f"Skipping already processed file: {tile_file}")
+                continue
+
             print(f"Processing tile: {tile_file}")
 
             # Detect and fix problematic ways
-            problematic_ways = find_problematic_ways(tile_path)
-            if problematic_ways:
-                print(f"Fixing problematic ways in {tile_file}: {problematic_ways}")
-                fixed_tile_path = tile_path.replace(".osm", "_fixed.osm")
-                removed_ways = fix_or_remove_invalid_ways(tile_path, fixed_tile_path)
-                add_xml_header_if_missing(fixed_tile_path)
-                print(f"Removed ways: {removed_ways}")
-                tile_path = fixed_tile_path
+            if not os.path.exists(fixed_tile_path):
+                problematic_ways = find_problematic_ways(tile_path)
+                if problematic_ways:
+                    print(f"Fixing problematic ways in {tile_file}: {problematic_ways}")
+                    removed_ways = fix_or_remove_invalid_ways(tile_path, fixed_tile_path)
+                    add_xml_header_if_missing(fixed_tile_path)
+                    print(f"Removed ways: {removed_ways}")
 
-            # Process the (potentially fixed) tile
+            # Determine file to process (fixed or original)
+            file_to_process = fixed_tile_path if os.path.exists(fixed_tile_path) else tile_path
+
+            # Process the file
             try:
-                with open(tile_path, "rb") as file:
+                with open(file_to_process, "rb") as file:
                     osm_input = file.read()
 
                 network = osm2streets_python.PyStreetNetwork(osm_input, "", json.dumps(input_options))
@@ -481,6 +490,8 @@ def process_tiles(tile_dir, input_options, output_dir, output_options=None):
         print(f"Failed tiles: {failed_tiles}")
         with open(os.path.join(output_dir, "failed_tiles.txt"), "w") as log_file:
             log_file.write("\n".join(failed_tiles))
+    
+    visualize_outputs(output_dir, show_individual_maps=True)
 
 
 def validate_geometry(geojson_func):
@@ -505,6 +516,136 @@ def validate_geometry(geojson_func):
         print(f"Geometry validation failed: {e}")
         return gpd.GeoDataFrame()
 
+
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+
+def visualize_outputs(output_dir, show_individual_maps=False):
+    """
+    Visualizes the outputs of the `process_tiles` function on one or multiple maps.
+
+    Parameters:
+    -----------
+    output_dir : str
+        The directory where the output GeoJSON files are stored.
+    show_individual_maps : bool, optional, default=False
+        If True, each output type (network, lanes, intersections) will be visualized on a separate map.
+        If False, all outputs will be overlaid on a single map.
+    """
+    network_file = os.path.join(output_dir, "combined_network.geojson")
+    lanes_file = os.path.join(output_dir, "combined_lanes.geojson")
+    intersections_file = os.path.join(output_dir, "combined_intersections.geojson")
+
+    # Load GeoDataFrames
+    network_gdf = gpd.read_file(network_file).drop(columns=['osm_way_ids'], errors='ignore') if os.path.exists(network_file) else None
+    lanes_gdf = gpd.read_file(lanes_file).drop(columns=['osm_way_ids'], errors='ignore') if os.path.exists(lanes_file) else None
+    intersections_gdf = gpd.read_file(intersections_file).drop(columns=['osm_way_ids'], errors='ignore') if os.path.exists(intersections_file) else None
+
+    # Ensure unique IDs
+    if network_gdf is not None:
+        network_gdf['id'] = range(len(network_gdf))
+    if lanes_gdf is not None:
+        lanes_gdf['id'] = range(len(lanes_gdf))
+    if intersections_gdf is not None:
+        intersections_gdf['id'] = range(len(intersections_gdf))
+
+    if show_individual_maps:
+        if network_gdf is not None:
+            plt.figure(figsize=(8, 8))
+            network_gdf.plot(ax=plt.gca(), color="blue", linewidth=0.5)
+            plt.title("Street Network")
+            plt.show()
+
+        if lanes_gdf is not None:
+            plt.figure(figsize=(8, 8))
+            lanes_gdf.plot(ax=plt.gca(), color="green", alpha=0.7)
+            plt.title("Lanes")
+            plt.show()
+
+        if intersections_gdf is not None:
+            plt.figure(figsize=(8, 8))
+            intersections_gdf.plot(ax=plt.gca(), color="red", alpha=0.7, marker="o")
+            plt.title("Intersections")
+            plt.show()
+    else:
+        plt.figure(figsize=(10, 10))
+        ax = plt.gca()
+
+        if network_gdf is not None:
+            network_gdf.plot(ax=ax, color="blue", linewidth=0.5, label="Network")
+        if lanes_gdf is not None:
+            lanes_gdf.plot(ax=ax, color="green", alpha=0.5, label="Lanes")
+        if intersections_gdf is not None:
+            intersections_gdf.plot(ax=ax, color="red", alpha=0.7, marker="o", label="Intersections")
+
+        # Custom legend
+        custom_legend = [
+            Patch(color="blue", label="Network"),
+            Patch(color="green", label="Lanes"),
+            Patch(color="red", label="Intersections")
+        ]
+        plt.legend(handles=custom_legend)
+        plt.title("Combined Map")
+        plt.show()
+
+# import matplotlib.pyplot as plt
+
+# def visualize_outputs(output_dir):
+#     """
+#     Visualizes the outputs of the `process_tiles` function on individual maps.
+
+#     Parameters:
+#     -----------
+#     output_dir : str
+#         The directory where the output GeoJSON files are stored.
+
+#     Notes:
+#     ------
+#     - This function generates separate maps for:
+#         - Street network
+#         - Lanes
+#         - Intersections
+#     - Only the available files will be visualized.
+#     """
+#     # Define file paths
+#     network_file = os.path.join(output_dir, "combined_network.geojson")
+#     lanes_file = os.path.join(output_dir, "combined_lanes.geojson")
+#     intersections_file = os.path.join(output_dir, "combined_intersections.geojson")
+
+#     # Load GeoDataFrames
+#     network_gdf = gpd.read_file(network_file).drop(columns=['osm_way_ids'], errors='ignore') if os.path.exists(network_file) else None
+#     lanes_gdf = gpd.read_file(lanes_file).drop(columns=['osm_way_ids'], errors='ignore') if os.path.exists(lanes_file) else None
+#     intersections_gdf = gpd.read_file(intersections_file).drop(columns=['osm_way_ids'], errors='ignore') if os.path.exists(intersections_file) else None
+
+#     # Ensure unique IDs
+#     if network_gdf is not None:
+#         network_gdf['id'] = range(len(network_gdf))
+#     if lanes_gdf is not None:
+#         lanes_gdf['id'] = range(len(lanes_gdf))
+#     if intersections_gdf is not None:
+#         intersections_gdf['id'] = range(len(intersections_gdf))
+
+#     # Plot each GeoDataFrame on individual maps
+#     if network_gdf is not None:
+#         plt.figure(figsize=(10, 10))
+#         network_gdf.plot(color="blue", linewidth=0.5)
+#         plt.title("Street Network")
+#         plt.axis("off")
+#         plt.show()
+
+#     if lanes_gdf is not None:
+#         plt.figure(figsize=(10, 10))
+#         lanes_gdf.plot(color="green", alpha=0.7)
+#         plt.title("Lanes")
+#         plt.axis("off")
+#         plt.show()
+
+#     if intersections_gdf is not None:
+#         plt.figure(figsize=(10, 10))
+#         intersections_gdf.plot(color="red", alpha=0.7, marker="o")
+#         plt.title("Intersections")
+#         plt.axis("off")
+#         plt.show()
 
 def main(location_name, tile_size, driving_side, output_options):
     """
