@@ -506,7 +506,7 @@ def validate_geometry(geojson_func):
         return gpd.GeoDataFrame()
 
 
-def main(location_name, tile_size, driving_side):
+def main(location_name, tile_size, driving_side, output_options):
     """
     Main function to orchestrate tile downloading and processing for a given location.
 
@@ -541,7 +541,7 @@ def main(location_name, tile_size, driving_side):
             "date_time": None,
             "override_driving_side": driving_side
         }
-        process_tiles(tile_dir, input_options, processed_dir)
+        process_tiles(tile_dir, input_options, processed_dir, output_options)
 
     except Exception as e:
         print(f"Error: {e}")
@@ -553,5 +553,6 @@ if __name__ == "__main__":
     parser.add_argument("--tile_size", type=float, default=0.01, help="Tile size in degrees (default: 0.01).")
     parser.add_argument("--driving_side", type=str, default="Right", choices=["Right", "Left"],
                         help="Driving side ('Right' or 'Left', default: 'Right').")
+    parser.add_argument("--outputs", type=dict, default=None, help="Outputs as dict: {'network': True, 'lanes': True, 'intersections': True}, default=all")
     args = parser.parse_args()
-    main(args.location, args.tile_size, args.driving_side)
+    main(args.location, args.tile_size, args.driving_side, args.outputs)
