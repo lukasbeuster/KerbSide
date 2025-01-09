@@ -13,6 +13,7 @@ This documentation provides an overview of the KerbSide Generator, a tool that l
 - Output results in GeoJSON format.
 
 Example output:
+
 <img src="sample_output.png" alt="Sample" width="600" height="450"> 
 
 ## Setup
