@@ -1,4 +1,4 @@
-# KerbSide
+# KerbSide <img src="logo.png" alt="Logo" width="45" height="45"> 
 
 This documentation provides an overview of the KerbSide Generator, a tool that leverages the [osm2streets](https://github.com/a-b-street/osm2streets) Python wrapper to generate sidewalk data from OpenStreetMap (OSM). The tool allows users to download and process OSM tiles for a given location and outputs combined GeoDataFrames representing sidewalks, lanes, and intersections.
 
@@ -10,7 +10,8 @@ This documentation provides an overview of the KerbSide Generator, a tool that l
 - Validate generated geometries for consistency and compatibility.
 - Output results in GeoJSON format.
 
-%TODO: Add figure
+Example output:
+<img src="sample_output.png" alt="Sample" width="600" height="450"> 
 
 ## Setup
 
@@ -24,15 +25,18 @@ pip install geopy requests geopandas pandas
 
 - Install osm2streets-python:
 
-osm2streets-python
-% TODO: add install pathway via fork
+KerbSide currently works with a custom implementation of osm2streets-python which includes some upgraded error handling not currently present in the main project. Thus please install the package via the following command: 
+
+```bash 
+pip install --no-cache-dir -e git+https://github.com/lukasbeuster/osm2streets.git@python_wrap#egg=osm2streets_python\&subdirectory=osm2streets-py
+```
+
 
 ### Directory Structure
 
 The script assumes the following directory structure:
 - ../data/raw_data/osm2streets/location_cache.json: Stores cached location data.
 - Output directories for tiles and processed files are automatically created under ../data/raw_data/osm2streets/{osmid}.
-% TODO: change to output
 
 ## Usage
 
@@ -138,6 +142,10 @@ The script includes mechanisms to:
 - Cache and reuse location data to minimize API queries.
 - Detect and fix invalid geometries in OSM data.
 - Skip invalid .osm files (empty, etc.) and log failures.
+
+### Known issues
+
+- some osm files cause the 
 
 ## Contributing
 
