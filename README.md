@@ -1,4 +1,6 @@
-# KerbSide <img src="logo.png" alt="Logo" width="45" height="45"> 
+<img src="logo.png" alt="Logo" width="150" height="150"> 
+
+# KerbSide 
 
 This documentation provides an overview of the KerbSide Generator, a tool that leverages the [osm2streets](https://github.com/a-b-street/osm2streets) Python wrapper to generate sidewalk data from OpenStreetMap (OSM). The tool allows users to download and process OSM tiles for a given location and outputs combined GeoDataFrames representing sidewalks, lanes, and intersections.
 
