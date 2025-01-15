@@ -2,7 +2,7 @@
 
 # KerbSide 
 
-This documentation provides an overview of the KerbSide Generator, a tool that leverages the [osm2streets](https://github.com/a-b-street/osm2streets) Python wrapper to generate sidewalk data from OpenStreetMap (OSM). The tool allows users to download and process OSM tiles for a given location and outputs combined GeoDataFrames representing sidewalks, lanes, and intersections.
+This documentation provides an overview of the KerbSide Generator, a tool that leverages the [osm2streets](https://github.com/a-b-street/osm2streets) Python wrapper to generate lane data including roads and sidewalks from OpenStreetMap (OSM). The tool allows users to download and process OSM tiles for a given location and outputs combined GeoDataFrames representing sidewalks, lanes, and intersections.
 
 ## Features
 - Retrieve bounding box and OSMID for a location using geopy.
