@@ -12,7 +12,11 @@ This documentation provides an overview of the KerbSide Generator, a tool that l
 - Validate generated geometries for consistency and compatibility.
 - Output results in GeoJSON format.
 
-Example output:
+## Workflow Example:
+
+<img src="Kerbside_seesaw.gif" alt="Graph to Polygon" width="720">
+
+## Example Output:
 
 <img src="sample_output.png" alt="Sample" width="600" height="450"> 
 
